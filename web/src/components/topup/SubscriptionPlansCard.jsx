@@ -41,6 +41,22 @@ import {
 
 const { Text } = Typography;
 
+function parsePlanFeatures(plan, t) {
+  if (plan?.feature_list_json) {
+    try {
+      const parsed = JSON.parse(plan.feature_list_json);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item).trim()).filter(Boolean);
+      }
+    } catch (error) {}
+  }
+  const fallback = [];
+  if (plan?.subtitle) fallback.push(plan.subtitle);
+  const resetLabel = formatSubscriptionResetPeriod(plan, t);
+  if (resetLabel && resetLabel !== t('不重置')) fallback.push(resetLabel);
+  return fallback;
+}
+
 // 过滤易支付方式
 function getEpayMethods(payMethods = []) {
   return (payMethods || []).filter(
@@ -492,7 +508,11 @@ const SubscriptionPlansCard = ({
                 const totalAmount = Number(plan?.total_amount || 0);
                 const { symbol, rate } = getCurrencyConfig();
                 const price = Number(plan?.price_amount || 0);
-                const convertedPrice = price * rate;
+                const planCurrency = String(plan?.currency || '').toUpperCase();
+                const convertedPrice =
+                  planCurrency === 'CNY' || planCurrency === 'RMB'
+                    ? price
+                    : price * rate;
                 const displayPrice = convertedPrice.toFixed(
                   Number.isInteger(convertedPrice) ? 0 : 2,
                 );
@@ -510,11 +530,21 @@ const SubscriptionPlansCard = ({
                   formatSubscriptionResetPeriod(plan, t) === t('不重置')
                     ? null
                     : `${t('额度重置')}: ${formatSubscriptionResetPeriod(plan, t)}`;
+                const pointLabel =
+                  Number(plan?.display_points || 0) > 0
+                    ? `${t('展示积分')}: ${plan.display_points}`
+                    : null;
+                const featureLabels = parsePlanFeatures(plan, t).map(
+                  (label) => ({
+                    label,
+                  }),
+                );
                 const planBenefits = [
                   {
                     label: `${t('有效期')}: ${formatSubscriptionDuration(plan, t)}`,
                   },
                   resetLabel ? { label: resetLabel } : null,
+                  pointLabel ? { label: pointLabel } : null,
                   totalAmount > 0
                     ? {
                         label: totalLabel,
@@ -523,6 +553,7 @@ const SubscriptionPlansCard = ({
                     : { label: totalLabel },
                   limitLabel ? { label: limitLabel } : null,
                   upgradeLabel ? { label: upgradeLabel } : null,
+                  ...featureLabels,
                 ].filter(Boolean);
 
                 return (
@@ -535,11 +566,11 @@ const SubscriptionPlansCard = ({
                   >
                     <div className='p-4 h-full flex flex-col'>
                       {/* 推荐标签 */}
-                      {isPopular && (
+                      {(plan?.badge_text || isPopular) && (
                         <div className='mb-2'>
                           <Tag color='purple' shape='circle' size='small'>
                             <Sparkles size={10} className='mr-1' />
-                            {t('推荐')}
+                            {plan?.badge_text || t('推荐')}
                           </Tag>
                         </div>
                       )}

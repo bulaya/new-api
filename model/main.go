@@ -294,7 +294,7 @@ func migrateDB() error {
 			return err
 		}
 	}
-	return nil
+	return EnsureDefaultModelMetadata()
 }
 
 func migrateDBFast() error {
@@ -390,8 +390,11 @@ func ensureSubscriptionPlanTableSQLite() error {
 ` + "`id`" + ` integer,
 ` + "`title`" + ` varchar(128) NOT NULL,
 ` + "`subtitle`" + ` varchar(255) DEFAULT '',
+` + "`badge_text`" + ` varchar(64) DEFAULT '',
 ` + "`price_amount`" + ` decimal(10,6) NOT NULL,
 ` + "`currency`" + ` varchar(8) NOT NULL DEFAULT 'CNY',
+` + "`display_points`" + ` bigint DEFAULT 0,
+` + "`feature_list_json`" + ` text,
 ` + "`duration_unit`" + ` varchar(16) NOT NULL DEFAULT 'month',
 ` + "`duration_value`" + ` integer NOT NULL DEFAULT 1,
 ` + "`custom_seconds`" + ` bigint NOT NULL DEFAULT 0,
@@ -423,8 +426,11 @@ PRIMARY KEY (` + "`id`" + `)
 	required := []sqliteColumnDef{
 		{Name: "title", DDL: "`title` varchar(128) NOT NULL"},
 		{Name: "subtitle", DDL: "`subtitle` varchar(255) DEFAULT ''"},
+		{Name: "badge_text", DDL: "`badge_text` varchar(64) DEFAULT ''"},
 		{Name: "price_amount", DDL: "`price_amount` decimal(10,6) NOT NULL"},
 		{Name: "currency", DDL: "`currency` varchar(8) NOT NULL DEFAULT 'CNY'"},
+		{Name: "display_points", DDL: "`display_points` bigint DEFAULT 0"},
+		{Name: "feature_list_json", DDL: "`feature_list_json` text"},
 		{Name: "duration_unit", DDL: "`duration_unit` varchar(16) NOT NULL DEFAULT 'month'"},
 		{Name: "duration_value", DDL: "`duration_value` integer NOT NULL DEFAULT 1"},
 		{Name: "custom_seconds", DDL: "`custom_seconds` bigint NOT NULL DEFAULT 0"},

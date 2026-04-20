@@ -154,10 +154,22 @@ func SetApiRouter(router *gin.Engine) {
 			clientRoute.GET("/self",
 				middleware.TokenAuth(),
 				controller.ClientGetSelf)
+			clientRoute.GET("/billing/self",
+				middleware.TokenAuth(),
+				controller.GetClientBillingSelf)
+			clientRoute.GET("/billing/catalog",
+				middleware.TokenAuth(),
+				controller.GetClientBillingCatalog)
+			clientRoute.GET("/payment/status",
+				middleware.TokenAuth(),
+				controller.GetClientPaymentStatus)
 
 			// 订阅套餐列表（公开，无需登录）
 			// Subscription plans list (public)
 			clientRoute.GET("/subscription/plans", controller.GetSubscriptionPlans)
+			clientRoute.GET("/subscription/self",
+				middleware.TokenAuth(),
+				controller.GetSubscriptionSelf)
 
 			// Public skills list/detail for myclaw skills market
 			clientRoute.GET("/skills", controller.ClientListPublicSkills)
@@ -175,6 +187,11 @@ func SetApiRouter(router *gin.Engine) {
 			clientRoute.GET("/skills/skillhub/download",
 				middleware.DownloadRateLimit(),
 				controller.ClientProxySkillHubDownload)
+
+			clientRoute.POST("/topup/epay/pay",
+				middleware.TokenAuth(),
+				middleware.CriticalRateLimit(),
+				controller.ClientPointTopupRequestEpay)
 		}
 
 		clientAdminRoute := apiRouter.Group("/client/admin")

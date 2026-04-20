@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -19,6 +20,22 @@ type SubscriptionPlanDTO struct {
 
 type BillingPreferenceRequest struct {
 	BillingPreference string `json:"billing_preference"`
+}
+
+func normalizeSubscriptionPlanFeatureList(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", nil
+	}
+	var features []string
+	if err := json.Unmarshal([]byte(raw), &features); err != nil {
+		return "", err
+	}
+	data, err := json.Marshal(features)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // ---- User APIs ----
@@ -130,6 +147,7 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 		req.Plan.Currency = "CNY"
 	}
 	req.Plan.Currency = "CNY"
+	req.Plan.BadgeText = strings.TrimSpace(req.Plan.BadgeText)
 	if req.Plan.DurationUnit == "" {
 		req.Plan.DurationUnit = model.SubscriptionDurationMonth
 	}
@@ -144,7 +162,17 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "总额度不能为负数")
 		return
 	}
+	if req.Plan.DisplayPoints < 0 {
+		common.ApiErrorMsg(c, "展示积分不能为负数")
+		return
+	}
 	req.Plan.UpgradeGroup = strings.TrimSpace(req.Plan.UpgradeGroup)
+	featuresJSON, err := normalizeSubscriptionPlanFeatureList(req.Plan.FeatureListJSON)
+	if err != nil {
+		common.ApiErrorMsg(c, "套餐亮点配置格式错误")
+		return
+	}
+	req.Plan.FeatureListJSON = featuresJSON
 	if req.Plan.UpgradeGroup != "" {
 		if _, ok := ratio_setting.GetGroupRatioCopy()[req.Plan.UpgradeGroup]; !ok {
 			common.ApiErrorMsg(c, "升级分组不存在")
@@ -156,7 +184,7 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "自定义重置周期需大于0秒")
 		return
 	}
-	err := model.DB.Create(&req.Plan).Error
+	err = model.DB.Create(&req.Plan).Error
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -193,6 +221,7 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		req.Plan.Currency = "CNY"
 	}
 	req.Plan.Currency = "CNY"
+	req.Plan.BadgeText = strings.TrimSpace(req.Plan.BadgeText)
 	if req.Plan.DurationUnit == "" {
 		req.Plan.DurationUnit = model.SubscriptionDurationMonth
 	}
@@ -207,7 +236,17 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "总额度不能为负数")
 		return
 	}
+	if req.Plan.DisplayPoints < 0 {
+		common.ApiErrorMsg(c, "展示积分不能为负数")
+		return
+	}
 	req.Plan.UpgradeGroup = strings.TrimSpace(req.Plan.UpgradeGroup)
+	featuresJSON, err := normalizeSubscriptionPlanFeatureList(req.Plan.FeatureListJSON)
+	if err != nil {
+		common.ApiErrorMsg(c, "套餐亮点配置格式错误")
+		return
+	}
+	req.Plan.FeatureListJSON = featuresJSON
 	if req.Plan.UpgradeGroup != "" {
 		if _, ok := ratio_setting.GetGroupRatioCopy()[req.Plan.UpgradeGroup]; !ok {
 			common.ApiErrorMsg(c, "升级分组不存在")
@@ -220,13 +259,16 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		return
 	}
 
-	err := model.DB.Transaction(func(tx *gorm.DB) error {
+	err = model.DB.Transaction(func(tx *gorm.DB) error {
 		// update plan (allow zero values updates with map)
 		updateMap := map[string]interface{}{
 			"title":                      req.Plan.Title,
 			"subtitle":                   req.Plan.Subtitle,
+			"badge_text":                 req.Plan.BadgeText,
 			"price_amount":               req.Plan.PriceAmount,
 			"currency":                   req.Plan.Currency,
+			"display_points":             req.Plan.DisplayPoints,
+			"feature_list_json":          req.Plan.FeatureListJSON,
 			"duration_unit":              req.Plan.DurationUnit,
 			"duration_value":             req.Plan.DurationValue,
 			"custom_seconds":             req.Plan.CustomSeconds,

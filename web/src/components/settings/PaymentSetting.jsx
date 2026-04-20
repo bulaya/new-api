@@ -42,6 +42,8 @@ const PaymentSetting = () => {
     PayMethods: '',
     AmountOptions: '',
     AmountDiscount: '',
+    PointsPerCNY: 200,
+    PointUnitName: '积分',
 
     StripeApiSecret: '',
     StripeWebhookSecret: '',
@@ -103,6 +105,12 @@ const PaymentSetting = () => {
             } catch (error) {
               newInputs['AmountDiscount'] = item.value;
             }
+            break;
+          case 'payment_setting.points_per_cny':
+            newInputs['PointsPerCNY'] = parseFloat(item.value);
+            break;
+          case 'payment_setting.point_unit_name':
+            newInputs['PointUnitName'] = item.value;
             break;
           case 'Price':
           case 'MinTopUp':

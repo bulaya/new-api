@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -15,6 +16,8 @@ type TopUp struct {
 	Id            int     `json:"id"`
 	UserId        int     `json:"user_id" gorm:"index"`
 	Amount        int64   `json:"amount"`
+	PointsAmount  int64   `json:"points_amount" gorm:"type:bigint;default:0"`
+	ProductType   string  `json:"product_type" gorm:"type:varchar(32);default:''"`
 	Money         float64 `json:"money"`
 	TradeNo       string  `json:"trade_no" gorm:"unique;type:varchar(255);index"`
 	PaymentMethod string  `json:"payment_method" gorm:"type:varchar(50)"`
@@ -129,7 +132,11 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 			return err
 		}
 
-		quota = topUp.Money * common.QuotaPerUnit
+		if topUp.ProductType == "points" || topUp.PointsAmount > 0 {
+			quota = float64(GetTopUpQuotaToAdd(topUp))
+		} else {
+			quota = topUp.Money * common.QuotaPerUnit
+		}
 		err = tx.Model(&User{}).Where("id = ?", topUp.UserId).Updates(map[string]interface{}{"stripe_customer": customerId, "quota": gorm.Expr("quota + ?", quota)}).Error
 		if err != nil {
 			return err
@@ -340,14 +347,7 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 		// 计算应充值额度：
 		// - Stripe 订单：Money 代表经分组倍率换算后的美元数量，直接 * QuotaPerUnit
 		// - 其他订单（如易支付）：Amount 为美元数量，* QuotaPerUnit
-		if topUp.PaymentMethod == PaymentMethodStripe {
-			dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
-			quotaToAdd = int(decimal.NewFromFloat(topUp.Money).Mul(dQuotaPerUnit).IntPart())
-		} else {
-			dAmount := decimal.NewFromInt(topUp.Amount)
-			dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
-			quotaToAdd = int(dAmount.Mul(dQuotaPerUnit).IntPart())
-		}
+		quotaToAdd = GetTopUpQuotaToAdd(topUp)
 		if quotaToAdd <= 0 {
 			return errors.New("无效的充值额度")
 		}
@@ -378,6 +378,27 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 	RecordTopupLog(userId, fmt.Sprintf("管理员补单成功，充值金额: %v，支付金额：%f", logger.FormatQuota(quotaToAdd), payMoney), callerIp, paymentMethod, "admin")
 	return nil
 }
+
+func GetTopUpQuotaToAdd(topUp *TopUp) int {
+	if topUp == nil {
+		return 0
+	}
+	if topUp.ProductType == "points" || topUp.PointsAmount > 0 {
+		points := topUp.PointsAmount
+		if points <= 0 && topUp.Amount > 0 {
+			points = topUp.Amount * operation_setting.GetPointsPerCNY()
+		}
+		return PointsToQuota(points)
+	}
+	if topUp.PaymentMethod == "stripe" {
+		dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
+		return int(decimal.NewFromFloat(topUp.Money).Mul(dQuotaPerUnit).IntPart())
+	}
+	dAmount := decimal.NewFromInt(topUp.Amount)
+	dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
+	return int(dAmount.Mul(dQuotaPerUnit).IntPart())
+}
+
 func RechargeCreem(referenceId string, customerEmail string, customerName string, callerIp string) (err error) {
 	if referenceId == "" {
 		return errors.New("未提供支付单号")

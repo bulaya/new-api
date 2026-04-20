@@ -38,6 +38,8 @@ export default function SettingsPaymentGateway(props) {
     EpayKey: '',
     Price: 7.3,
     MinTopUp: 1,
+    PointsPerCNY: 200,
+    PointUnitName: '积分',
   });
   const formApiRef = useRef(null);
 
@@ -55,6 +57,11 @@ export default function SettingsPaymentGateway(props) {
           props.options.MinTopUp !== undefined
             ? parseFloat(props.options.MinTopUp)
             : 1,
+        PointsPerCNY:
+          props.options.PointsPerCNY !== undefined
+            ? parseFloat(props.options.PointsPerCNY)
+            : 200,
+        PointUnitName: props.options.PointUnitName || '积分',
       };
 
       setInputs(currentInputs);
@@ -89,6 +96,18 @@ export default function SettingsPaymentGateway(props) {
       }
       if (inputs.MinTopUp !== '') {
         options.push({ key: 'MinTopUp', value: inputs.MinTopUp.toString() });
+      }
+      if (inputs.PointsPerCNY !== '') {
+        options.push({
+          key: 'payment_setting.points_per_cny',
+          value: inputs.PointsPerCNY.toString(),
+        });
+      }
+      if (inputs.PointUnitName !== '') {
+        options.push({
+          key: 'payment_setting.point_unit_name',
+          value: inputs.PointUnitName,
+        });
       }
 
       const requestQueue = options.map((opt) =>
@@ -175,8 +194,28 @@ export default function SettingsPaymentGateway(props) {
               />
             </Col>
           </Row>
+          <Row
+            gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+            style={{ marginTop: 16 }}
+          >
+            <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+              <Form.InputNumber
+                field='PointsPerCNY'
+                label={t('积分汇率')}
+                placeholder={t('例如：200')}
+                extraText={t('表示 1 元可兑换多少积分')}
+              />
+            </Col>
+            <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+              <Form.Input
+                field='PointUnitName'
+                label={t('积分单位名称')}
+                placeholder={t('例如：积分')}
+              />
+            </Col>
+          </Row>
           <Button onClick={submitPayAddress} style={{ marginTop: 16 }}>
-            {t('更新易支付设置')}
+            {t('更新支付设置')}
           </Button>
         </Form.Section>
       </Form>

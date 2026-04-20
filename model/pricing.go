@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"sync"
@@ -124,6 +125,10 @@ func updatePricing() {
 			}
 		}
 	}
+
+	sortRuleModelsBySpecificity(prefixList)
+	sortRuleModelsBySpecificity(suffixList)
+	sortRuleModelsBySpecificity(containsList)
 
 	// 将非精确规则模型匹配到 metaMap
 	for _, m := range prefixList {
@@ -338,6 +343,17 @@ func updatePricing() {
 	modelEnableGroupsLock.Unlock()
 
 	lastGetPricingTime = time.Now()
+}
+
+func sortRuleModelsBySpecificity(models []*Model) {
+	sort.SliceStable(models, func(i, j int) bool {
+		leftLen := len(models[i].ModelName)
+		rightLen := len(models[j].ModelName)
+		if leftLen != rightLen {
+			return leftLen > rightLen
+		}
+		return models[i].Id < models[j].Id
+	})
 }
 
 // GetSupportedEndpointMap 返回全局端点到路径的映射

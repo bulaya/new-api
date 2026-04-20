@@ -108,7 +108,26 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		common.ApiErrorMsg(c, "拉起支付失败")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": params, "url": uri})
+
+	payment, err := buildNativeEpayPaymentResponse(
+		c.Request.Context(),
+		"subscription",
+		req.PaymentMethod,
+		tradeNo,
+		plan.PriceAmount,
+		plan.Title,
+		uri,
+		params,
+	)
+	if err != nil {
+		_ = model.ExpireSubscriptionOrder(tradeNo)
+		common.ApiErrorMsg(c, "解析支付二维码失败")
+		return
+	}
+	payment.CreatedTime = order.CreateTime
+	payment.PlanID = plan.Id
+
+	common.ApiSuccess(c, payment)
 }
 
 func SubscriptionEpayNotify(c *gin.Context) {

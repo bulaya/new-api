@@ -61,7 +61,9 @@ const SubscriptionPurchaseModal = ({
   const totalAmount = Number(plan?.total_amount || 0);
   const { symbol, rate } = getCurrencyConfig();
   const price = plan ? Number(plan.price_amount || 0) : 0;
-  const convertedPrice = price * rate;
+  const planCurrency = String(plan?.currency || '').toUpperCase();
+  const convertedPrice =
+    planCurrency === 'CNY' || planCurrency === 'RMB' ? price : price * rate;
   const displayPrice = convertedPrice.toFixed(
     Number.isInteger(convertedPrice) ? 0 : 2,
   );
@@ -124,6 +126,16 @@ const SubscriptionPurchaseModal = ({
                   </Text>
                   <Text className='text-slate-900 dark:text-slate-100'>
                     {formatSubscriptionResetPeriod(plan, t)}
+                  </Text>
+                </div>
+              )}
+              {Number(plan?.display_points || 0) > 0 && (
+                <div className='flex justify-between items-center'>
+                  <Text strong className='text-slate-700 dark:text-slate-200'>
+                    {t('展示积分')}：
+                  </Text>
+                  <Text className='text-slate-900 dark:text-slate-100'>
+                    {plan.display_points}
                   </Text>
                 </div>
               )}

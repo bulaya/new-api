@@ -145,12 +145,15 @@ func InvalidateSubscriptionPlanCache(planId int) {
 type SubscriptionPlan struct {
 	Id int `json:"id"`
 
-	Title    string `json:"title" gorm:"type:varchar(128);not null"`
-	Subtitle string `json:"subtitle" gorm:"type:varchar(255);default:''"`
+	Title     string `json:"title" gorm:"type:varchar(128);not null"`
+	Subtitle  string `json:"subtitle" gorm:"type:varchar(255);default:''"`
+	BadgeText string `json:"badge_text" gorm:"type:varchar(64);default:''"`
 
 	// Display money amount (follow existing code style: float64 for money)
-	PriceAmount float64 `json:"price_amount" gorm:"type:decimal(10,6);not null;default:0"`
-	Currency    string  `json:"currency" gorm:"type:varchar(8);not null;default:'CNY'"`
+	PriceAmount     float64 `json:"price_amount" gorm:"type:decimal(10,6);not null;default:0"`
+	Currency        string  `json:"currency" gorm:"type:varchar(8);not null;default:'CNY'"`
+	DisplayPoints   int64   `json:"display_points" gorm:"type:bigint;default:0"`
+	FeatureListJSON string  `json:"feature_list_json" gorm:"type:text"`
 
 	DurationUnit  string `json:"duration_unit" gorm:"type:varchar(16);not null;default:'month'"`
 	DurationValue int    `json:"duration_value" gorm:"type:int;not null;default:1"`
