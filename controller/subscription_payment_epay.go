@@ -120,7 +120,7 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		params,
 	)
 	if err != nil {
-		_ = model.ExpireSubscriptionOrder(tradeNo)
+		_ = model.ExpireSubscriptionOrder(tradeNo, req.PaymentMethod)
 		common.ApiErrorMsg(c, "解析支付二维码失败")
 		return
 	}

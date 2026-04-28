@@ -50,13 +50,14 @@ type ClientSubscriptionStatus struct {
 }
 
 type ClientBillingSelfResponse struct {
-	User                     ClientUserInfo             `json:"user"`
-	PointUnitName            string                     `json:"point_unit_name"`
-	WalletPoints             int64                      `json:"wallet_points"`
-	SubscriptionPoints       int64                      `json:"subscription_points"`
-	TotalPoints              int64                      `json:"total_points"`
-	HasUnlimitedSubscription bool                       `json:"has_unlimited_subscription"`
-	ActiveSubscriptions      []ClientSubscriptionStatus `json:"active_subscriptions"`
+	User                     ClientUserInfo                     `json:"user"`
+	PointUnitName            string                             `json:"point_unit_name"`
+	WalletPoints             int64                              `json:"wallet_points"`
+	SubscriptionPoints       int64                              `json:"subscription_points"`
+	TotalPoints              int64                              `json:"total_points"`
+	HasUnlimitedSubscription bool                               `json:"has_unlimited_subscription"`
+	ActiveSubscriptions      []ClientSubscriptionStatus         `json:"active_subscriptions"`
+	DailyLoginReward         model.ClientDailyLoginRewardStatus `json:"daily_login_reward"`
 }
 
 type ClientPointTopupRequest struct {
@@ -163,6 +164,11 @@ func GetClientBillingSelf(c *gin.Context) {
 	}
 
 	walletPoints := model.QuotaToPoints(int64(user.Quota))
+	dailyReward, err := model.GetClientDailyLoginRewardStatus(userId)
+	if err != nil {
+		common.SysLog("GetClientBillingSelf: failed to get daily login reward status: " + err.Error())
+		dailyReward = model.NewClientDailyLoginRewardStatus(false, "", model.PointsToQuota(model.ClientDailyLoginRewardPoints))
+	}
 	common.ApiSuccess(c, ClientBillingSelfResponse{
 		User: ClientUserInfo{
 			Id:           user.Id,
@@ -177,6 +183,7 @@ func GetClientBillingSelf(c *gin.Context) {
 		TotalPoints:              walletPoints + subscriptionPoints,
 		HasUnlimitedSubscription: hasUnlimited,
 		ActiveSubscriptions:      subscriptionStatuses,
+		DailyLoginReward:         dailyReward,
 	})
 }
 

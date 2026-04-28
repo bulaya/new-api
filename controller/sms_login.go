@@ -100,12 +100,10 @@ func SmsLogin(c *gin.Context) {
 		return
 	}
 
-	if !common.VerifyCodeWithKey(req.Phone, req.Code, common.SmsVerificationPurpose) {
+	if !common.ConsumeCodeWithKey(req.Phone, req.Code, common.SmsVerificationPurpose) {
 		common.ApiErrorI18n(c, i18n.MsgSmsVerificationCodeErr)
 		return
 	}
-
-	common.DeleteKey(req.Phone, common.SmsVerificationPurpose)
 
 	user := model.User{Phone: req.Phone}
 	err := user.FillUserByPhone()

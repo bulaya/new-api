@@ -157,6 +157,9 @@ func SetApiRouter(router *gin.Engine) {
 			clientRoute.GET("/billing/self",
 				middleware.TokenAuth(),
 				controller.GetClientBillingSelf)
+			clientRoute.POST("/daily-login-reward",
+				middleware.TokenAuth(),
+				controller.ClaimClientDailyLoginReward)
 			clientRoute.GET("/billing/catalog",
 				middleware.TokenAuth(),
 				controller.GetClientBillingCatalog)

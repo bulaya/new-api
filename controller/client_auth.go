@@ -85,11 +85,10 @@ func ClientSmsLogin(c *gin.Context) {
 	}
 
 	// 3. 验证短信验证码（验证后立即删除，防重放）
-	if !common.VerifyCodeWithKey(req.Phone, req.Code, common.SmsVerificationPurpose) {
+	if !common.ConsumeCodeWithKey(req.Phone, req.Code, common.SmsVerificationPurpose) {
 		common.ApiErrorI18n(c, i18n.MsgSmsVerificationCodeErr)
 		return
 	}
-	common.DeleteKey(req.Phone, common.SmsVerificationPurpose)
 
 	// 4. 查找用户，若不存在则自动注册
 	user := model.User{Phone: req.Phone}
@@ -146,6 +145,17 @@ func ClientSmsLogin(c *gin.Context) {
 		return
 	}
 
+	rewardStatus, rewardErr := model.ClaimClientDailyLoginReward(user.Id)
+	if rewardErr != nil {
+		common.SysLog("ClientSmsLogin: failed to claim daily login reward: " + rewardErr.Error())
+	} else if rewardStatus.Rewarded {
+		model.RecordLog(user.Id, model.LogTypeSystem,
+			fmt.Sprintf("客户端每日登录赠送 %d 积分", rewardStatus.PointsAwarded))
+		if latestUser, latestErr := model.GetUserById(user.Id, false); latestErr == nil {
+			user = *latestUser
+		}
+	}
+
 	// 7. 记录登录日志（便于审计异常登录）
 	model.RecordLog(user.Id, model.LogTypeManage,
 		fmt.Sprintf("客户端登录: phone=%s client_id=%s ip=%s",
@@ -166,6 +176,29 @@ func ClientSmsLogin(c *gin.Context) {
 			ApiKey: "sk-" + apiKey,
 		},
 	})
+}
+
+func ClaimClientDailyLoginReward(c *gin.Context) {
+	userId := c.GetInt("id")
+	if userId <= 0 {
+		common.ApiErrorMsg(c, "未授权")
+		return
+	}
+	if c.GetString("token_name") != clientTokenName {
+		common.ApiErrorMsg(c, "仅客户端令牌可领取每日登录奖励")
+		return
+	}
+
+	status, err := model.ClaimClientDailyLoginReward(userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if status.Rewarded {
+		model.RecordLog(userId, model.LogTypeSystem,
+			fmt.Sprintf("客户端每日登录赠送 %d 积分", status.PointsAwarded))
+	}
+	common.ApiSuccess(c, status)
 }
 
 // ensureClientToken 查找或创建用户的客户端专用 Token，返回完整 Key（不带 sk- 前缀）
